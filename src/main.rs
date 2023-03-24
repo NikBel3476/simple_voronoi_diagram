@@ -1,3 +1,4 @@
+use image;
 use rand::prelude::*;
 use std::io::Write;
 
@@ -44,6 +45,7 @@ fn main() {
     render_diagram();
     fill_markers();
     save_as_ppm("diagram.ppm");
+    save_as_png("diagram.png");
 }
 
 fn fill_image(color: Color) {
@@ -60,6 +62,26 @@ fn save_as_ppm(filename: &str) {
     let mut file = std::fs::File::create(filename).expect("unable to open or create file");
     write!(file, "P6\n{WIDTH} {HEIGHT}\n255\n")
         .expect(format!("unable to write into file: {filename}").as_str());
+    let buffer = get_image_buffer();
+    file.write_all(&buffer).expect("failed to write file");
+    file.flush().expect("unable to flush file");
+}
+
+fn save_as_png(filename: &str) {
+    let path = std::path::Path::new(filename);
+    let mut buffer = get_image_buffer();
+    image::save_buffer(
+        path,
+        &buffer,
+        WIDTH as u32,
+        HEIGHT as u32,
+        image::ColorType::Rgb8,
+    )
+    .expect("failed to save png file");
+}
+
+fn get_image_buffer() -> Vec<u8> {
+    let mut buffer: Vec<u8> = vec![];
     unsafe {
         for y in &IMAGE {
             for x in y {
@@ -68,11 +90,11 @@ fn save_as_ppm(filename: &str) {
                     ((x & 0x00FF00) >> 8) as u8,
                     (x & 0x00FF) as u8,
                 ];
-                file.write_all(&bytes).expect("failed to write file");
+                buffer.extend_from_slice(&bytes);
             }
         }
     }
-    file.flush().expect("unable to flush file");
+    buffer
 }
 
 fn generate_random_markers() {
